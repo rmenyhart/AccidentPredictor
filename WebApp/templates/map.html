@@ -1,0 +1,80 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Map</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css')}}"/>
+		<noscript><link rel="stylesheet" href=" {{url_for('static', filename='css/noscript.css')}} " /></noscript>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.3/fetch.js"></script>
+		<script>
+		function calculateAndDisplayRoute(directions_service, directions_display, origin, destination){
+			directions_service.route({
+				origin: origin,
+				destination: destination,
+				travelMode: google.maps.TravelMode.DRIVING
+			},
+			function(response, status){
+				if (status == google.maps.DirectionsStatus.OK){
+					directions_display.setDirections(response);
+				}
+				else{
+					window.alert('Directions request failed with status: ' + status);
+				}
+			});
+		}
+		</script>
+		<script>
+		function initMap(){
+			var origin = new google.maps.LatLng({{map.origin.lat}}, {{map.origin.lng}})
+			var destination = new google.maps.LatLng({{map.destination.lat}}, {{map.destination.lng}})
+			var map = 
+			new google.maps.Map(document.getElementById('map'),
+			{
+				center: {lat: {{map.origin.lat}}, lng: {{map.origin.lng}} },
+				zoom:16
+			});
+
+			var directions_service = new google.maps.DirectionsService;
+    		var directions_display = new google.maps.DirectionsRenderer({
+      			map: map
+    		});
+
+			calculateAndDisplayRoute(directions_service, directions_display, origin, destination);
+
+			var waypoints = [];
+			fetch( "http://127.0.0.1:5000/waypoints/" + {{map.map_id|string }} )
+			.then(function(response) {
+				return response.text();
+			})
+			.then(function(body) {
+				var obj = JSON.parse(body)
+				console.log(obj)
+				var current_waypoint = {};
+				var wps = obj.waypoints;
+				var l = wps.length;
+				for (i = 0; i < l; i++){
+					var marker = new google.maps.Marker({
+						position: new google.maps.LatLng(parseFloat(obj.waypoints[i].lat), parseFloat(obj.waypoints[i].lng)),
+						label:'W',
+						map: map,
+						icon: 'http://www.google.com/mapfiles/dd-end.png'
+					});
+				}
+			})
+			.catch(function(){
+				infoWindow.setContent('An error occurred, we are unable to retreive waypoints.');
+			});
+		};
+		</script>
+		<script async defer src="https://maps.googleapis.com/maps/api/js?key={{API_KEY}}&callback=initMap"> </script>
+	</head>
+	<body>
+	<div class="container">
+		<div id="map" style="width: 100%; height:800px;"></div>
+	</div>
+	<ul class="actions">
+		<li><a href="/#two" class="button">Back</a></li>
+	</ul>
+	</body>
+</html>
