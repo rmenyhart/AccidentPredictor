@@ -19,10 +19,12 @@ openw = OpenWeatherService(OPENW_API_KEY)
 
 maps = []
 hotspots = []
-n_maps = 0
 
-clustering = None
-classifier = None
+clustering = Clustering()
+clustering.load_centers('cluster_centers.csv')
+
+classifier = Classifier()
+classifier.load_classifier('model.sav')
 
 @app.route('/')
 def index():
@@ -44,7 +46,6 @@ def predict():
 		current_time_local = datetime.now().replace(second=0, microsecond = 0)
 		current_time_utc = datetime.utcnow().replace(second=0, microsecond = 0, tzinfo=timezone.utc)
 		selected_time_local = datetime.strptime(date + ' ' + time, '%Y-%m-%d %H:%M').replace(second=0, microsecond=0)
-		print(selected_time_local, file=sys.stderr)
 		utc_offset = datetime.now() - datetime.utcnow()
 		selected_time_utc = selected_time_local - utc_offset
 		selected_time_utc = selected_time_utc.replace(tzinfo=timezone.utc)
@@ -53,6 +54,7 @@ def predict():
 		elif (current_time_utc - selected_time_utc > timedelta(days=5)):
 			return 'Please select a time from the previous 5 days for historical weather data'
 
+		print('Time correct', file=sys.stderr)
 		#Get origin coordinates
 		origin = gmaps.getCoordinatesByAddress(origin_address)
 		if (origin == None):
@@ -63,10 +65,14 @@ def predict():
 		if (destination == None):
 			return 'Error finding destination point.'
 
+		print('Found orig and dest', file=sys.stderr)
+
 		#Get route coordinates
 		waypoints = gmaps.getRouteCoordinates(origin, destination)
 		if (waypoints == None):
 			return 'Error getting waypoints.'
+
+		print('Found route', file=sys.stderr)
 
 		#Filter the clustered waypoints
 		clustered_waypoints = []
@@ -74,6 +80,7 @@ def predict():
 			if clustering.is_clustered(wp, 0.03):
 				clustered_waypoints.append(wp)
 
+		print('Found clustered', file=sys.stderr)
 
 		#Filter active clustered waypoints
 		active_clustered_waypoints = []
@@ -87,17 +94,16 @@ def predict():
 				pred = classifier.predict([data])[0]
 				print(data, file=sys.stderr)
 				print(pred, file=sys.stderr)
-				print('\n', file=sys.stderr)
 				if pred == 1:
 					active_clustered_waypoints.append(wp)
 			else:
 				return 'Error getting weather data for (' + str(wp.lat) + ' , ' + str(wp.lng) + ')'
 
+		print('Found active', file=sys.stderr)
 		n_maps = len(maps)
 		mymap = Map(origin, destination, n_maps)
 		maps.append(mymap)
-		hotspots.append(clustered_waypoints)
-		n_maps += 1
+		hotspots.append(active_clustered_waypoints)
 		return redirect('/map/' + str(n_maps))
 
 @app.route('/map/<n_maps>')
@@ -120,10 +126,4 @@ def waypoints(n_maps):
 
 
 if __name__ == '__main__':
-	clustering = Clustering()
-	clustering.load_centers('cluster_centers.csv')
-
-	classifier = Classifier()
-	classifier.load_classifier('model.sav')
-
-	app.run(debug=True)
+	app.run()

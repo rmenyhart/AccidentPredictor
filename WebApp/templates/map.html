@@ -25,10 +25,12 @@
 		}
 		</script>
 		<script>
+		let map;
+		let markers = [];
 		function initMap(){
 			var origin = new google.maps.LatLng({{map.origin.lat}}, {{map.origin.lng}})
 			var destination = new google.maps.LatLng({{map.destination.lat}}, {{map.destination.lng}})
-			var map = 
+			var map =
 			new google.maps.Map(document.getElementById('map'),
 			{
 				center: {lat: {{map.origin.lat}}, lng: {{map.origin.lng}} },
@@ -40,32 +42,52 @@
       			map: map
     		});
 
-			calculateAndDisplayRoute(directions_service, directions_display, origin, destination);
-
-			var waypoints = [];
-			fetch( "http://127.0.0.1:5000/waypoints/" + {{map.map_id|string }} )
+			console.log("http://mrobert.pythonanywhere.com/waypoints/" + {{map.map_id|string }})
+			fetch( "http://mrobert.pythonanywhere.com/waypoints/" + {{map.map_id|string }} )
 			.then(function(response) {
-				return response.text();
+			    return response.json()
 			})
-			.then(function(body) {
-				var obj = JSON.parse(body)
-				console.log(obj)
-				var current_waypoint = {};
-				var wps = obj.waypoints;
-				var l = wps.length;
+			.then(function(json) {
+				var l = json.waypoints.length;
 				for (i = 0; i < l; i++){
-					var marker = new google.maps.Marker({
-						position: new google.maps.LatLng(parseFloat(obj.waypoints[i].lat), parseFloat(obj.waypoints[i].lng)),
-						label:'W',
+					const marker = new google.maps.Marker({
+						position: new google.maps.LatLng(parseFloat(json.waypoints[i].lat), parseFloat(json.waypoints[i].lng)),
 						map: map,
 						icon: 'http://www.google.com/mapfiles/dd-end.png'
 					});
+					markers.push(marker)
 				}
 			})
 			.catch(function(){
-				infoWindow.setContent('An error occurred, we are unable to retreive waypoints.');
+			    window.alert('An error occurred, we are unable to retreive waypoints.');
 			});
+
+			calculateAndDisplayRoute(directions_service, directions_display, origin, destination);
 		};
+
+        function addMarker(location) {
+            const marker = new google.maps.Marker({
+                position: location,
+                map: map,
+            });
+          markers.push(marker);
+        }
+        function clearMarkers() {
+          setMapOnAll(null);
+        }
+        function deleteMarkers() {
+          clearMarkers();
+          markers = [];
+        }
+        function setMapOnAll(map) {
+          for (let i = 0; i < markers.length; i++) {
+            markers[i].setMap(map);
+          }
+        }
+
+        function showMarkers() {
+          setMapOnAll(map);
+        }
 		</script>
 		<script async defer src="https://maps.googleapis.com/maps/api/js?key={{API_KEY}}&callback=initMap"> </script>
 	</head>
