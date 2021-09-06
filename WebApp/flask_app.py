@@ -11,10 +11,10 @@ import sys
 
 app = Flask(__name__)
 
-GMAPS_API_KEY="AIzaSyBCyCMKoSaUd7fuXmpPceSRxV0yYEc7u-o"
+GMAPS_API_KEY="removed"
 gmaps = GmapsService(GMAPS_API_KEY)
 
-OPENW_API_KEY="1bfdf37c545388842d5215319e0d7c56"
+OPENW_API_KEY="removed"
 openw = OpenWeatherService(OPENW_API_KEY)
 
 maps = []
